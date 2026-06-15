@@ -1,0 +1,57 @@
+@import "tailwindcss";
+@plugin "../node_modules/daisyui/index.js";
+@plugin "../node_modules/daisyui/index.js" {
+   themes: light --default, dark --prefersdark;
+ }
+@import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300..700;1,300..700&family=Edu+NSW+ACT+Cursive:wght@400..700&family=Lora:ital,wght@0,400..700;1,400..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Cursive:wght@400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Cursive:wght@400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Cursive:wght@400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Cursive:wght@400..700&family=Lora:ital,wght@0,400..700;1,400..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
+html, body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; 
+}
+@theme {
+  --font-inter: "Inter", sans-serif;
+  --font-dm: "DM Sans", sans-serif;
+  --font-poppins: "Poppins", sans-serif;
+  --font-roboto: "Roboto", sans-serif;
+  --font-zalando: "Zalando Sans", sans-serif;
+  --font-zalando-expanded: "Zalando Sans Expanded", sans-serif;
+  --font-lora: "Lora", sans-serif;
+  --font-monos: "JetBrains Mono", monospace;
+  --font-tech: "Share Tech Mono", monospace;
+  --font-playfair: "Playfair Display", serif;
+  --font-cursive: "Edu NSW ACT Cursive", cursive;
+  --font-gravitas: "Gravitas One", cursive;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.reset-tw :not(pre):not(code) {
+  all:revert;
+}
+
+.chat-bubble img {
+  max-width: 300px !important;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+
