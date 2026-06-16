@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { IoIosLogOut } from "react-icons/io";
 import logo from '../images/logo.png'
 import { useContext } from 'react'
 import { AppContext } from '../context/userContext'
@@ -14,13 +16,31 @@ import moment from 'moment';
 import Messages from '../components/Messages'
 
 export const Home = () => {
-  const { chats, getChats, setSelect, user, credits, setCredits} = useContext(AppContext)
-
+  const { chats, getChats, setSelect, user, credits, setCredits, email, login} = useContext(AppContext)
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
+  const navigator = useNavigate()
   const handleMenu = () => setOpen(prev => !prev)
+  useEffect(()=>{
+    if (!login) {
+      navigator("/login");
+      toast.error('Please login to continue');
+    }
+  },[login])
+  const logout = async () => {
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/user/logout`,
+      {},
+      { withCredentials: true }
+    );
 
+    navigator("/login");
+  } catch (error) {
+    console.log(error);
+  }
+};
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
@@ -75,12 +95,12 @@ export const Home = () => {
     return title.toLowerCase().includes(search.toLowerCase())
   })
 
-  const creditMax = 20
+  const creditMax = 400
   const noCredits = (credits ?? 0) < 1
   const lowCredits = !noCredits && (credits ?? 0) <= 3
   const creditPct = Math.min(((credits ?? 0) / creditMax) * 100, 100)
-  const userInitial = user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'
-
+  const userInitial = user?.charAt(0)?.toUpperCase() || email?.charAt(0)?.toUpperCase() || 'U'
+ 
   // Credit bar color
   const barColor = noCredits
     ? 'from-red-500 to-red-400'
@@ -276,14 +296,20 @@ export const Home = () => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-gray-200 truncate leading-snug">
-                {user?.name || 'User'}
+                {user? user:'User'}
               </p>
               <p className="text-[11px] text-gray-600 truncate">
-                {user?.email || ''}
+                {email || ''}
               </p>
             </div>
           </div>
-
+          {/* Logout button */}
+          <button onClick={logout}
+            className="absolute top-3 right-3 text-gray-500 hover:text-red-400 transition-colors"
+            aria-label="Logout"
+          >
+            <IoIosLogOut size={18} />
+          </button>
         </div>
       </aside>
 

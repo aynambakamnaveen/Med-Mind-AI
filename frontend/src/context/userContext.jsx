@@ -16,8 +16,7 @@ export const AppContextProvider = ({children}) =>{
   const [select, setSelect] = useState(null)
   const [led, setLed] = useState(false)
   {/*Fetching user data*/}
-  useEffect(() => {
-    const loadData = async () => {
+  const loadData = async () => {
       setLed(true)
       try {
         // FIRST fetch user
@@ -32,15 +31,13 @@ export const AppContextProvider = ({children}) =>{
         // THEN fetch chats
       } catch (error) {
         setUser(null)
-        console.log(error)
       } finally{
         setLed(false)
       }
-    } 
-
+    }
+  useEffect(() => {
     loadData()
-
-  }, [])
+  }, [user, login])
   {/*Get chats using API's*/}
   const getChats = async () => {
     try {

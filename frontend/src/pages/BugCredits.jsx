@@ -6,9 +6,15 @@ import { useContext } from 'react'
 import { AppContext } from '../context/userContext'
 const BuyCredits = () => {
     const [loader, setloader] = useState(false)
-    const { user, getChats, credits, setCredits, email } = useContext(AppContext)
+    const { user, getChats, credits, setCredits, email, login } = useContext(AppContext)
     const [plan, setPlan] = useState("")
     const nav = useNavigate();
+    useEffect(()=>{
+        if (!login) {
+          nav("/login");
+          toast.error('Please login to continue');
+        }
+    },[login])
     const handlePayment = async (amount, planName) => {
     try {
         const { data } = await axios.post(

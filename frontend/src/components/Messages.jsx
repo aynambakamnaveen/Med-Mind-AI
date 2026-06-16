@@ -11,6 +11,7 @@ import { FaPlus, FaFilePdf, FaFileLines } from "react-icons/fa6";
 import { IoSend } from "react-icons/io5";
 import { LuMenu } from "react-icons/lu";
 import { FaCopy, FaCheck } from "react-icons/fa";
+import { ImCross } from "react-icons/im";
 
 const Messages = ({ onOpenSidebar }) => {
   const { user, getChats, select, setSelect, credits, setCredits } = useContext(AppContext)
@@ -19,6 +20,8 @@ const Messages = ({ onOpenSidebar }) => {
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
+  // ── NEW: staged file state ──
+  const [pendingFile, setPendingFile] = useState(null)   // { file: File, previewUrl: string, type: 'image'|'doc' }
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
   const bottomRef = useRef(null)
@@ -30,6 +33,14 @@ const Messages = ({ onOpenSidebar }) => {
   useEffect(() => {
     setSelectmessages(select?.messages)
   }, [select])
+
+  // Clean up object URL when pendingFile changes
+  useEffect(() => {
+    return () => {
+      if (pendingFile?.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl)
+    }
+  }, [pendingFile])
+
   const autoResize = () => {
     const el = textareaRef.current
     if (!el) return
@@ -43,7 +54,10 @@ const Messages = ({ onOpenSidebar }) => {
       return
     }
     const trimmedMessage = message.trim()
-    if (!trimmedMessage || !select?._id) return
+
+    // Must have text OR a file (or both)
+    if (!trimmedMessage && !pendingFile) return
+    if (!select?._id) return
 
     const tempId = `temp-${Date.now()}`
     const optimisticMsg = {
@@ -51,7 +65,16 @@ const Messages = ({ onOpenSidebar }) => {
       role: 'user',
       content: trimmedMessage,
       timestamp: new Date().toISOString(),
+      // show local preview optimistically
+      file: pendingFile
+        ? {
+            url: pendingFile.previewUrl,
+            type: pendingFile.type,
+            name: pendingFile.file.name,
+          }
+        : undefined,
     }
+
     setSelect(prev => ({
       ...prev,
       messages: [...(prev?.messages || []), optimisticMsg],
@@ -59,27 +82,64 @@ const Messages = ({ onOpenSidebar }) => {
     setMessage("")
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
+    // Capture and clear pending file before async work
+    const fileToSend = pendingFile
+    setPendingFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+
     try {
       setSending(true)
-      const payload = { chatId: select._id, prompt: trimmedMessage }
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/message/text`,
-        payload,
-        { withCredentials: true }
-      )
+
+      let data
+
+      if (fileToSend) {
+        // Send as multipart/form-data (text + file together)
+        setUploading(true)
+        const formData = new FormData()
+        formData.append('file', fileToSend.file)
+        formData.append('chatId', select._id)
+        if (trimmedMessage) formData.append('prompt', trimmedMessage)
+
+        const res = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/message/text`,
+          formData,
+          { withCredentials: true, headers: { 'Content-Type': 'multipart/form-data' } }
+        )
+        data = res.data
+        setUploading(false)
+      } else {
+        // Text-only
+        const res = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/message/text`,
+          { chatId: select._id, prompt: trimmedMessage },
+          { withCredentials: true }
+        )
+        data = res.data
+      }
+
       if (data?.chat) {
         setSelect(data.chat)
         localStorage.setItem('selectedChat', JSON.stringify(data.chat))
       }
+
+      // Update credits
+      const updatedCredits = data?.credits ?? data?.user?.credits
+      if (typeof updatedCredits === 'number') {
+        setCredits(updatedCredits)
+      } else {
+        setCredits(prev => prev - 1)
+      }
+
       await getChats()
-      setCredits((prev)=>prev-1)
     } catch (error) {
+      // Roll back optimistic message
       setSelect(prev => ({
         ...prev,
         messages: (prev?.messages || []).filter(m => m._id !== tempId),
       }))
       setMessage(trimmedMessage)
       if (textareaRef.current) autoResize()
+      setUploading(false)
       const msg = error.response?.data?.message
       toast.error(msg || 'Failed to send message')
       console.error(error)
@@ -97,36 +157,28 @@ const Messages = ({ onOpenSidebar }) => {
 
   const handleFileClick = () => fileInputRef.current?.click()
 
-  const handleFileChange = async (e) => {
+  // ── FIXED: just stage the file, don't send ──
+  const handleFileChange = (e) => {
     const file = e.target.files[0]
-    if (!file || !select?._id) return
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('chatId', select?._id)
-    try {
-      setUploading(true)
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/message/text`,
-        formData,
-        { withCredentials: true, headers: { 'Content-Type': 'multipart/form-data' } }
-      )
-      if (data?.chat) {
-        setSelect(data.chat)
-        localStorage.setItem('selectedChat', JSON.stringify(data.chat))
-      }
-      // Update credits after file upload too
-      const updatedCredits = data?.credits ?? data?.user?.credits
-      if (typeof updatedCredits === 'number' && setCredits) {
-        setCredits(updatedCredits)
-      }
-      await getChats()
-    } catch (error) {
-      toast.error('File upload failed')
-      console.error(error)
-    } finally {
-      setUploading(false)
-      e.target.value = ''
-    }
+    if (!file) return
+
+    const isImage = file.type.startsWith('image/')
+    const previewUrl = isImage ? URL.createObjectURL(file) : null
+
+    setPendingFile({
+      file,
+      previewUrl,
+      type: isImage ? 'image' : 'doc',
+    })
+
+    // Reset input so the same file can be re-selected if cleared
+    e.target.value = ''
+  }
+
+  const removePendingFile = () => {
+    if (pendingFile?.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl)
+    setPendingFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleCopy = (text, id) => {
@@ -386,73 +438,114 @@ const Messages = ({ onOpenSidebar }) => {
             </div>
           )}
 
-          <div className={`flex items-end gap-2 px-3 py-2 rounded-2xl
+          <div className={`flex flex-col rounded-2xl
                           bg-[#161b22] border shadow-[0_-8px_30px_rgba(0,0,0,0.4)]
                           transition-colors
                           ${noCredits
                             ? 'border-red-500/20 opacity-60 pointer-events-none'
                             : 'border-[#30363d] focus-within:border-teal-500/40'}`}>
 
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx"
-            />
+            {/* ── Pending file preview (inside the input box, above the textarea row) ── */}
+            {pendingFile && (
+              <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
+                <div className="relative flex items-center gap-2 px-3 py-2 rounded-xl
+                                bg-[#0d1117] border border-[#30363d] max-w-[240px]">
+                  {pendingFile.type === 'image' ? (
+                    <img
+                      src={pendingFile.previewUrl}
+                      alt="preview"
+                      className="w-10 h-10 object-cover rounded-lg shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-teal-400/10 border border-teal-400/20
+                                    flex items-center justify-center shrink-0">
+                      {pendingFile.file.name?.endsWith('.pdf')
+                        ? <FaFilePdf size={16} className="text-teal-400" />
+                        : <FaFileLines size={16} className="text-teal-400" />
+                      }
+                    </div>
+                  )}
+                  <span className="text-[12px] text-gray-300 truncate max-w-[130px]">
+                    {pendingFile.file.name}
+                  </span>
+                  {/* Remove file button */}
+                  <button
+                    onClick={removePendingFile}
+                    className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 flex items-center justify-center
+                               rounded-full bg-[#30363d] hover:bg-red-500/80
+                               text-gray-400 hover:text-white transition-colors"
+                    aria-label="Remove file"
+                  >
+                    <ImCross size={7} />
+                  </button>
+                </div>
+              </div>
+            )}
 
-            {/* Attach */}
-            <button
-              onClick={handleFileClick}
-              disabled={uploading || !select || noCredits}
-              className="flex items-center justify-center w-8 h-8 rounded-lg mb-0.5
-                         text-gray-600 hover:text-teal-400 hover:bg-teal-400/10
-                         transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-              aria-label="Attach file"
-            >
-              {uploading
-                ? <span className="w-4 h-4 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" />
-                : <FaPlus size={13} />
-              }
-            </button>
+            {/* ── Textarea + buttons row ── */}
+            <div className="flex items-end gap-2 px-3 py-2">
 
-            {/* Textarea */}
-            <textarea
-              ref={textareaRef}
-              value={message}
-              onChange={(e) => { setMessage(e.target.value); autoResize() }}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              disabled={!select || sending || noCredits}
-              placeholder={
-                noCredits
-                  ? 'No credits left. Buy more to continue…'
-                  : select
-                    ? 'Ask a medical question… (Enter to send)'
-                    : 'Select a chat to start messaging'
-              }
-              className="flex-1 bg-transparent outline-none resize-none text-[14px] text-gray-200
-                         placeholder-gray-600 py-2 leading-snug disabled:cursor-not-allowed"
-              style={{ maxHeight: '120px', overflowY: 'auto' }}
-            />
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/*,.pdf,.doc,.docx"
+              />
 
-            {/* Send */}
-            <button
-              onClick={handleSend}
-              disabled={sending || !message.trim() || !select || noCredits}
-              className="flex items-center justify-center w-8 h-8 rounded-xl mb-0.5 shrink-0
-                         bg-gradient-to-br from-teal-400 to-sky-500 text-[#0d1117]
-                         hover:opacity-85 hover:scale-105 active:scale-95
-                         transition-all duration-150
-                         disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:scale-100
-                         disabled:from-transparent disabled:to-transparent disabled:bg-[#21262d] disabled:text-gray-600"
-              aria-label="Send message"
-            >
-              {sending
-                ? <span className="w-3.5 h-3.5 border-2 border-[#0d1117] border-t-transparent rounded-full animate-spin" />
-                : <IoSend size={14} />
-              }
-            </button>
+              {/* Attach */}
+              <button
+                onClick={handleFileClick}
+                disabled={uploading || !select || noCredits}
+                className="flex items-center justify-center w-8 h-8 rounded-lg mb-0.5
+                           text-gray-600 hover:text-teal-400 hover:bg-teal-400/10
+                           transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                aria-label="Attach file"
+              >
+                {uploading
+                  ? <span className="w-4 h-4 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" />
+                  : <FaPlus size={13} />
+                }
+              </button>
+
+              {/* Textarea */}
+              <textarea
+                ref={textareaRef}
+                value={message}
+                onChange={(e) => { setMessage(e.target.value); autoResize() }}
+                onKeyDown={handleKeyDown}
+                rows={1}
+                disabled={!select || sending || noCredits}
+                placeholder={
+                  noCredits
+                    ? 'No credits left. Buy more to continue…'
+                    : select
+                      ? 'Ask a medical question… (Enter to send)'
+                      : 'Select a chat to start messaging'
+                }
+                className="flex-1 bg-transparent outline-none resize-none text-[14px] text-gray-200
+                           placeholder-gray-600 py-2 leading-snug disabled:cursor-not-allowed"
+                style={{ maxHeight: '120px', overflowY: 'auto' }}
+              />
+
+              {/* Send */}
+              <button
+                onClick={handleSend}
+                disabled={sending || (!message.trim() && !pendingFile) || !select || noCredits}
+                className="flex items-center justify-center w-8 h-8 rounded-xl mb-0.5 shrink-0
+                           bg-gradient-to-br from-teal-400 to-sky-500 text-[#0d1117]
+                           hover:opacity-85 hover:scale-105 active:scale-95
+                           transition-all duration-150
+                           disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:scale-100
+                           disabled:from-transparent disabled:to-transparent disabled:bg-[#21262d] disabled:text-gray-600"
+                aria-label="Send message"
+              >
+                {sending
+                  ? <span className="w-3.5 h-3.5 border-2 border-[#0d1117] border-t-transparent rounded-full animate-spin" />
+                  : <IoSend size={14} />
+                }
+              </button>
+            </div>
           </div>
 
           <p className="text-center text-[10px] text-gray-700 mt-2">
