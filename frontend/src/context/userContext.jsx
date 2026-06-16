@@ -67,9 +67,8 @@ export const AppContextProvider = ({children}) =>{
     const storedChat = localStorage.getItem('selectedChat');
     if (storedChat) {
       try {
-        setSelect(JSON.parse(storedChat))   // ✅ safe now
+        setSelect(JSON.parse(storedChat))  
       } catch {
-        // stored value was "[object Object]" or other garbage — reset it
         setSelect(chats[0])
         localStorage.setItem("selectedChat", JSON.stringify(chats[0]))
       }
@@ -81,7 +80,6 @@ export const AppContextProvider = ({children}) =>{
       )
     }
   }, [chats])
-    console.log(select)
   return (
     <AppContext.Provider value={{user,setUser,chats, setChats, email, credits, setCredits, login, setLogin, getChats, select, setSelect, led}}>
         {children}

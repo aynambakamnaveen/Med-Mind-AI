@@ -13,10 +13,12 @@ const app = express();
 
 //middlewares
 app.use(express.json())
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}))
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }),
+);
 
 app.use(cookieParser())
 
@@ -25,10 +27,6 @@ app.use('/api/user',userRouter)
 app.use('/api/chat',chatRouter)
 app.use('/api/message',messageRouter)
 app.use("/api/payment", paymentRouter);
-
-console.log("Razorpay Key ID:", process.env.RAZORPAY_KEY_ID);
-console.log("Razorpay Key Secret:", process.env.RAZORPAY_KEY_SECRET);
-
 const PORT = process.env.PORT || 8080
 
 connectDB().then(() => {

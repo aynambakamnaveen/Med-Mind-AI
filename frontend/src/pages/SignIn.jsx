@@ -10,13 +10,13 @@ const SignIn = () => {
     const [confirmpass,setConfirmPass] = useState("")
     const [load, setLoad] = useState(false)
     const nav = useNavigate()
-    const handleSubmit = async()=>{
+    const handleSubmit = async(e)=>{
         e.preventDefault();
         if (!username || !email || !pass || !confirmpass) return toast.error('Fill all fields');
         if (pass !== confirmpass){return toast.error('Password mismatch')}
         try {
             setLoad(true);
-            await axios.post(`${import.meta.env.VITE_API_URL}/api/user/register`, {username, email, pass},
+            await axios.post(`${import.meta.env.VITE_API_URL}/api/user/register`, {name: username, email, password: pass},
             { withCredentials: true });
             setUsername('');
             setEmail('');
@@ -45,7 +45,7 @@ const SignIn = () => {
             <button type='submit' className="w-full mb-3 bg-indigo-500 hover:bg-indigo-600 transition-all active:scale-95 py-2.5 rounded text-white font-medium cursor-pointer" disabled={load}>{load?"Creating....":"Create Account"}</button>
             <div className='flex items-center justify-center gap-2'>
                 <p className="text-center mt-4">Already have an account?</p>
-                <p className="text-blue-500 underline cursor-pointer">Log In</p>
+                <p onClick={() => nav('/login')} className="text-blue-500 underline cursor-pointer">Log In</p>
             </div>
         </form>
     </main>

@@ -118,8 +118,6 @@ const Messages = ({ onOpenSidebar }) => {
       const updatedCredits = data?.credits ?? data?.user?.credits
       if (typeof updatedCredits === 'number' && setCredits) {
         setCredits(updatedCredits)
-      } else {
-        await refreshCredits()
       }
       await getChats()
     } catch (error) {

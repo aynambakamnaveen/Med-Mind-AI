@@ -110,7 +110,7 @@ const Login = () => {
               <p className=' text-green-400/60 inline-block'>User</p>
             </div>
             <form onSubmit={handleSubmit} className='flex flex-col space-y-1'>
-              <label className='text-purple-300/30 tracking-widest mt-3'>EAMIL ADRESSS</label>
+              <label className='text-purple-300/30 tracking-widest mt-3'>EMAIL ADDRESS</label>
               <div className='p-2 border border-purple-300/20  rounded-xl flex gap-3 items-center bg-gray-100/10 shadow-2xl hover:shadow-cyan-400/50'>
                 <FaUser className='text-purple-300/30'/>
                 <input value={email} onChange={(e)=>{setEmail(e.target.value)}} type="email" className='outline-none' placeholder='you@gmail.com' />
@@ -127,7 +127,7 @@ const Login = () => {
               <button type="submit" className='mt-2 md:mt-3 cursor-pointer transition-all duration-150 hover:bg-gray-300/50 active:scale-93 border py-1 rounded-xl border-gray-300/30 font-medium font-poppins flex items-center justify-center gap-2'><CiLogin/>{ loading ?"Signing in.....":"Sign in"}</button>
               <div className='text-center flex items-center justify-center font-playfair cursor-pointer mt-2'>
                 <p className='text-green-300/30'>No account?</p>
-                <p className='text-green-400'>Create one free</p>
+                <p onClick={() => navigate('/register')} className='text-green-400'>Create one free</p>
               </div>
             </form>
           </div>

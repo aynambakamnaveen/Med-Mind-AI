@@ -39,10 +39,11 @@ const BuyCredits = () => {
                         );
                         console.log("Verify Response:", verifyData.data);
                         if (verifyData.data.success) {
+                            const creditsAdded = verifyData.data.creditsAdded  // backend already returns this
+                            setCredits(prev => prev + creditsAdded)
                             nav('/')
                             toast.success("Payment Successful 🎉");
-
-                        } else {
+                        }else {
                             toast.error("Payment Verification Failed");
                         }
                     } catch (err) {
