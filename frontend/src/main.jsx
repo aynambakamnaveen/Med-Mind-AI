@@ -4,10 +4,11 @@ import './index.css'
 import App from './App.jsx'
 import {AppContextProvider} from './context/userContext.jsx'
 import { BrowserRouter } from 'react-router-dom'
+// main.jsx — remove StrictMode wrapper
 createRoot(document.getElementById('root')).render(
-    <BrowserRouter>
-      <AppContextProvider>
-        <App />
-      </AppContextProvider>
-    </BrowserRouter>
+  <BrowserRouter>
+    <AppContextProvider>
+      <App />
+    </AppContextProvider>
+  </BrowserRouter>
 )
