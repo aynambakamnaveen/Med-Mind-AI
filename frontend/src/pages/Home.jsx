@@ -16,31 +16,39 @@ import moment from 'moment';
 import Messages from '../components/Messages'
 
 export const Home = () => {
-  const { chats, getChats, setSelect, user, credits, setCredits, email, login} = useContext(AppContext)
+  // FIX: pull `led` (loading flag) and `logout` from context
+  const { chats, getChats, setSelect, user, credits, setCredits, email, login, led, logout } = useContext(AppContext)
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
   const navigator = useNavigate()
   const handleMenu = () => setOpen(prev => !prev)
-  useEffect(()=>{
-    if (!login) {
-      navigator("/login");
-      toast.error('Please login to continue');
-    }
-  },[login])
-  const logout = async () => {
-  try {
-    await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/user/logout`,
-      {},
-      { withCredentials: true }
-    );
 
-    navigator("/login");
-  } catch (error) {
-    console.log(error);
+  // FIX: `led` is null while the initial auth check is in-flight.
+  // Only redirect after the check completes (led === false) and user is not logged in.
+  useEffect(() => {
+    if (led === false && !login) {
+      navigator("/login")
+      toast.error('Please login to continue')
+    }
+  }, [led, login])
+
+  // FIX: use context logout helper so all state resets, then navigate
+  const handleLogout = async () => {
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/user/logout`,
+        {},
+        { withCredentials: true }
+      )
+    } catch (error) {
+      console.log(error)
+    } finally {
+      logout()          // clears user, credits, chats, login, localStorage
+      navigator("/login")
+    }
   }
-};
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
@@ -100,13 +108,21 @@ export const Home = () => {
   const lowCredits = !noCredits && (credits ?? 0) <= 3
   const creditPct = Math.min(((credits ?? 0) / creditMax) * 100, 100)
   const userInitial = user?.charAt(0)?.toUpperCase() || email?.charAt(0)?.toUpperCase() || 'U'
- 
-  // Credit bar color
+
   const barColor = noCredits
     ? 'from-red-500 to-red-400'
     : lowCredits
       ? 'from-amber-400 to-orange-400'
       : 'from-teal-400 to-sky-500'
+
+  // FIX: show a loader while the auth check runs so there's no flash-redirect
+  if (led === null || led === true) {
+    return (
+      <main className="flex h-screen w-screen items-center justify-center bg-[#0d1117]">
+        <div className="w-6 h-6 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" />
+      </main>
+    )
+  }
 
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-[#0d1117]">
@@ -230,7 +246,6 @@ export const Home = () => {
         {/* ══ USER PANEL (bottom) ══ */}
         <div className="border-t border-[#21262d] px-4 pt-3 pb-4 bg-[#0d1117]">
 
-          {/* Zero-credits warning banner */}
           {noCredits && (
             <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-xl
                             bg-red-500/10 border border-red-500/25">
@@ -241,7 +256,6 @@ export const Home = () => {
             </div>
           )}
 
-          {/* Low-credits warning */}
           {lowCredits && (
             <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-xl
                             bg-amber-500/10 border border-amber-500/25">
@@ -252,7 +266,6 @@ export const Home = () => {
             </div>
           )}
 
-          {/* Credits label + count */}
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-[0.8px] text-gray-600">
               Credits
@@ -264,7 +277,6 @@ export const Home = () => {
             </span>
           </div>
 
-          {/* Credits progress bar */}
           <div className="h-1 w-full bg-[#21262d] rounded-full overflow-hidden mb-3">
             <div
               className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-500`}
@@ -272,9 +284,8 @@ export const Home = () => {
             />
           </div>
 
-          {/* Buy Credits button */}
           <button
-            onClick={() => window.location.href = '/buy-credits'}
+            onClick={() => navigator('/buy-credits')}
             className={`
               w-full flex items-center justify-center gap-2
               py-2 rounded-xl text-[13px] font-bold mb-3
@@ -288,7 +299,6 @@ export const Home = () => {
             {noCredits ? 'Buy Credits Now' : 'Buy Credits'}
           </button>
 
-          {/* User info */}
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-sky-500
                             flex items-center justify-center text-[13px] font-bold text-[#0d1117] shrink-0">
@@ -296,15 +306,17 @@ export const Home = () => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-gray-200 truncate leading-snug">
-                {user? user:'User'}
+                {user ? user : 'User'}
               </p>
               <p className="text-[11px] text-gray-600 truncate">
                 {email || ''}
               </p>
             </div>
           </div>
-          {/* Logout button */}
-          <button onClick={logout}
+
+          {/* FIX: calls handleLogout which resets context + navigates */}
+          <button
+            onClick={handleLogout}
             className="absolute top-3 right-3 text-gray-500 hover:text-red-400 transition-colors"
             aria-label="Logout"
           >
