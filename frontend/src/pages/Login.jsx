@@ -15,7 +15,7 @@ import toast from 'react-hot-toast'
 import { useContext } from 'react'
 import {AppContext} from '../context/userContext'
 const Login = () => {
-  const {login, setLogin} = useContext(AppContext)
+  const {login, setLogin, loadData} = useContext(AppContext)
   const [email,setEmail] = useState('');
   const [password,setPassword] = useState('');
   const [showpass, setShowPass] = useState(false)
@@ -34,6 +34,7 @@ const Login = () => {
       setEmail('');
       setPassword('');
       setLogin(true);
+      await loadData();
       navigate('/');
       toast.success('Login successful');
     } catch (error) {
