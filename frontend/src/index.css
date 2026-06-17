@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@plugin "../node_modules/daisyui/index.js";
 @plugin "../node_modules/daisyui/index.js" {
    themes: light --default, dark --prefersdark;
  }

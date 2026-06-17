@@ -35,17 +35,11 @@ const Messages = ({ onOpenSidebar }) => {
   }, [select])
 
   // Clean up object URL when pendingFile changes
-  useEffect(() => {
-    return () => {
-      if (pendingFile?.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl)
-    }
-  }, [pendingFile])
 
-  const autoResize = () => {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  const autoResize = (target) => {
+    if (!target) return
+    target.style.height = 'auto'
+    target.style.height = Math.min(target.scrollHeight, 120) + 'px'
   }
 
   const handleSend = async () => {
@@ -512,7 +506,7 @@ const Messages = ({ onOpenSidebar }) => {
               <textarea
                 ref={textareaRef}
                 value={message}
-                onChange={(e) => { setMessage(e.target.value); autoResize() }}
+                onChange={(e) => { setMessage(e.target.value); autoResize(e.target) }}
                 onKeyDown={handleKeyDown}
                 rows={1}
                 disabled={!select || sending || noCredits}

@@ -33,7 +33,6 @@ const Login = () => {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/user/login`, { email, password }, { withCredentials: true });
       setEmail('');
       setPassword('');
-      setLogin(true);
       await loadData();
       navigate('/');
       toast.success('Login successful');
